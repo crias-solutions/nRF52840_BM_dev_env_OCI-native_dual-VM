@@ -1,4 +1,3 @@
-cat > .gitattributes << 'EOF'
 # Ensure consistent line endings
 * text=auto
 *.sh text eol=lf
