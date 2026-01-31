@@ -21,3 +21,19 @@ Provisions a **dual-VM architecture** on OCI Always Free Tier:
 - 🌐 Develop from anywhere with VS Code Remote-SSH
 
 ## 🏗️ Architecture
+┌─────────────────┐ ┌──────────────────────┐ ┌──────────────────────┐ 
+│ LOCAL PC │ SSH │ BUILD SERVER VM │ SCP │ HARDWARE GATEWAY VM │ │ (nRF52840 DK) │◄───────►│ (Compilation) │◄───────►│ (USB/IP Bridge) │ │ usbipd-win │ Tunnel │ ARM GCC + nRF5 SDK │ │ nrfjprog + JLink │ 
+└─────────────────┘ └──────────────────────┘ └──────────────────────┘
+
+## 🚀 Quick Start
+
+### Prerequisites
+- Oracle Cloud account (free tier)
+- Windows PC with nRF52840 DK
+- Terraform installed locally
+- Git configured
+
+### 1. Clone This Repository
+```bash
+git clone https://github.com/YOUR_USERNAME/nrf52840-oci-dev.git
+cd nrf52840-oci-dev
