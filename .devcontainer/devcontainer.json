@@ -1,0 +1,35 @@
+{
+  "name": "nRF52840 Development Environment",
+  "dockerFile": "Dockerfile",
+  "context": "..",
+  
+  "mounts": [
+    "source=${localWorkspaceFolder}/firmware,target=/workspace/nrf52840_project,type=bind"
+  ],
+  
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-vscode.cpptools",
+        "ms-vscode.cmake-tools",
+        "marus25.cortex-debug",
+        "continue.continue",
+        "github.copilot"
+      ],
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "C_Cpp.default.compilerPath": "/opt/arm-gnu-toolchain-12.2.rel1-x86_64-arm-none-eabi/bin/arm-none-eabi-gcc",
+        "C_Cpp.default.includePath": [
+          "/workspace/nRF5_SDK/**",
+          "/opt/arm-gnu-toolchain-12.2.rel1-x86_64-arm-none-eabi/arm-none-eabi/include/**"
+        ]
+      }
+    }
+  },
+  
+  "forwardPorts": [8080],
+  
+  "postCreateCommand": "arm-none-eabi-gcc --version && echo '✅ nRF52840 environment ready!'",
+  
+  "remoteUser": "root"
+}
