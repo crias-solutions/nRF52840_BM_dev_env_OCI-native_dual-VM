@@ -6,7 +6,7 @@ on:
     paths:
       - '.devcontainer/Dockerfile'
       - '.github/workflows/docker-build-push.yml'
-  workflow_dispatch:  # Allow manual trigger
+  workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
@@ -54,4 +54,4 @@ jobs:
           cache-to: type=gha,mode=max
       
       - name: Image digest
-        run: echo "Image pushed with digest ${{ steps.build.outputs.digest }}"
+        run: echo "✅ Image pushed successfully"
