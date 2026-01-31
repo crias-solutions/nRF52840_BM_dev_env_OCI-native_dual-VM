@@ -1,28 +1,31 @@
-# Multi-stage build for optimized image size
-FROM ubuntu:22.04 AS base
+# Base image: Ubuntu 22.04 LTS
+FROM ubuntu:22.04
 
-# Prevent interactive prompts
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install base dependencies
+# ========== SYSTEM DEPENDENCIES ==========
 RUN apt-get update && apt-get install -y \
     build-essential \
+    make \
+    gcc \
     git \
-    wget \
     curl \
+    wget \
+    unzip \
+    usbip \
+    hwdata \
+    usbutils \
+    kmod \
     python3 \
     python3-pip \
-    usbip \
-    usbutils \
-    linux-tools-generic \
-    make \
-    cmake \
-    unzip \
+    python3-venv \
+    ca-certificates \
+    gnupg \
     nano \
     vim \
     && rm -rf /var/lib/apt/lists/*
 
-# Install ARM GCC Toolchain (v12.2.rel1)
+# ========== ARM GCC TOOLCHAIN v12.2.rel1 ==========
 WORKDIR /opt
 RUN wget -q https://developer.arm.com/-/media/Files/downloads/gnu/12.2.rel1/binrel/arm-gnu-toolchain-12.2.rel1-x86_64-arm-none-eabi.tar.xz \
     && tar -xf arm-gnu-toolchain-12.2.rel1-x86_64-arm-none-eabi.tar.xz \
@@ -30,41 +33,52 @@ RUN wget -q https://developer.arm.com/-/media/Files/downloads/gnu/12.2.rel1/binr
 
 ENV PATH="/opt/arm-gnu-toolchain-12.2.rel1-x86_64-arm-none-eabi/bin:${PATH}"
 
-# Install nRF5 SDK (v17.1.0) with flattening fix
-WORKDIR /workspace
+# ========== nRF5 SDK v17.1.0 (FLATTENED) ==========
+WORKDIR /opt/nrf5_sdk
 RUN wget -q https://nsscprodmedia.blob.core.windows.net/prod/software-and-other-downloads/sdks/nrf5/binaries/nrf5_sdk_17.1.0_ddde560.zip \
     && unzip -q nrf5_sdk_17.1.0_ddde560.zip \
-    && mv nrf5_sdk_17.1.0_ddde560/* nRF5_SDK/ || mv nRF5_SDK_17.1.0_ddde560/* nRF5_SDK/ \
+    && if [ -d "nRF5_SDK_17.1.0_ddde560" ]; then mv nRF5_SDK_17.1.0_ddde560/* .; rmdir nRF5_SDK_17.1.0_ddde560; fi \
     && rm nrf5_sdk_17.1.0_ddde560.zip
 
-# Configure SDK Makefile
+ENV NRF5_SDK_PATH=/opt/nrf5_sdk
+
+# Configure SDK Makefile for our toolchain
 RUN sed -i 's|GNU_INSTALL_ROOT ?= .*|GNU_INSTALL_ROOT ?= /opt/arm-gnu-toolchain-12.2.rel1-x86_64-arm-none-eabi/bin/|' \
-    /workspace/nRF5_SDK/components/toolchain/gcc/Makefile.posix
+    /opt/nrf5_sdk/components/toolchain/gcc/Makefile.posix
 
-# Install nRF Command Line Tools (via .tgz to avoid container issues)
+# ========== nRF COMMAND LINE TOOLS ==========
 WORKDIR /tmp
-RUN wget -q https://nsscprodmedia.blob.core.windows.net/prod/software-and-other-downloads/desktop-software/nrf-command-line-tools/sw/versions-10-x-x/10-24-2/nrf-command-line-tools-10.24.2_linux-amd64.tar.gz \
-    && tar -xzf nrf-command-line-tools-10.24.2_linux-amd64.tar.gz -C /opt \
-    && rm nrf-command-line-tools-10.24.2_linux-amd64.tar.gz
+RUN wget -q https://nsscprodmedia.blob.core.windows.net/prod/software-and-other-downloads/desktop-software/nrf-command-line-tools/sw/versions-10-x-x/10-24-2/nrf-command-line-tools_10.24.2_amd64.deb \
+    && dpkg -i nrf-command-line-tools_10.24.2_amd64.deb || apt-get install -f -y \
+    && rm nrf-command-line-tools_10.24.2_amd64.deb
 
-ENV PATH="/opt/nrf-command-line-tools/bin:${PATH}"
+# ========== J-LINK (TGZ METHOD) ==========
+RUN mkdir -p /opt/SEGGER \
+    && wget -q --post-data "accept_license_agreement=accepted" \
+       -O /tmp/JLink.tgz \
+       "https://www.segger.com/downloads/jlink/JLink_Linux_x86_64.tgz" \
+    && tar -xzf /tmp/JLink.tgz -C /opt/SEGGER/ \
+    && rm /tmp/JLink.tgz \
+    && JLINK_DIR=$(ls /opt/SEGGER | grep JLink) \
+    && ln -s /opt/SEGGER/$JLINK_DIR /opt/SEGGER/JLink
 
-# Install Node.js (for Claude Code CLI)
+ENV PATH="/opt/SEGGER/JLink:${PATH}"
+ENV LD_LIBRARY_PATH="/opt/SEGGER/JLink:${LD_LIBRARY_PATH}"
+
+# ========== NODE.JS & CLAUDE CODE CLI ==========
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
-    && apt-get install -y nodejs
+    && apt-get install -y nodejs \
+    && npm install -g @anthropic-ai/claude-code || echo "Claude CLI installation skipped"
 
-# Install Claude Code CLI (placeholder - adjust based on actual installation)
-RUN npm install -g @anthropic-ai/claude-code-cli || echo "Claude CLI installation skipped"
+# ========== USB/IP KERNEL MODULE SETUP ==========
+RUN echo "vhci-hcd" > /etc/modules-load.d/usbip.conf
 
-# Load USB/IP kernel module (for hardware bridging)
-RUN modprobe vhci-hcd || echo "vhci-hcd module not available in container"
-
-# Create udev rule for J-Link
+# ========== CREATE UDEV RULE FOR J-LINK ==========
 RUN echo 'SUBSYSTEM=="usb", ATTR{idVendor}=="1366", ATTR{idProduct}=="1061", MODE="0666", GROUP="plugdev"' \
     > /etc/udev/rules.d/99-jlink.rules
 
-# Set working directory
+# ========== WORKING DIRECTORY ==========
 WORKDIR /workspace/nrf52840_project
 
-# Default command
+# ========== DEFAULT COMMAND ==========
 CMD ["/bin/bash"]
