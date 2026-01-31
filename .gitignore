@@ -53,3 +53,68 @@ dkms.conf
 
 # debug information files
 *.dwo
+
+# Terraform
+terraform/.terraform/
+terraform/.terraform.lock.hcl
+terraform/terraform.tfstate
+terraform/terraform.tfstate.backup
+terraform/terraform.tfvars
+*.tfvars
+!terraform.tfvars.example
+.terraform.tfstate.lock.info
+
+# Build Artifacts (Embedded)
+firmware/**/build/
+firmware/**/*.hex
+firmware/**/*.elf
+firmware/**/*.bin
+firmware/**/*.out
+firmware/**/*.map
+firmware/**/*.o
+firmware/**/*.d
+firmware/**/*.lst
+
+# Toolchain/SDK (if accidentally copied locally)
+nRF5_SDK/
+arm-gnu-toolchain*/
+nrf-command-line-tools*/
+
+# IDE & Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# SSH Keys & Secrets
+*.pem
+*.key
+!*.pub
+.oci/
+secrets/
+.env
+
+# Logs
+*.log
+logs/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+venv/
+env/
+
+# Docker
+.devcontainer/.env
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Backup files
+*.bak
+*.backup
